@@ -320,22 +320,29 @@ bool mergeBasins(const MapF& terrain, Map<Index>& sinks,
                 Index neighbor = basin.excessPoint.value();
                 Index otherSink = sinks[neighbor];
                 Basin& otherBasin = basins[otherSink];
-                if (std::abs(otherBasin.waterLevel - basin.waterLevel) < 0.0001f) {
-                    mergeTo(terrain, sinks, basin, otherBasin);
-                    fillBasin(terrain, sinks, basin);
+                if (std::abs(otherBasin.waterLevel - basin.waterLevel) < 0.0001f) {                    
+                    bool order = terrain[basin.sink] < terrain[otherSink];
+                    Basin& base = order ? basin : otherBasin;
+                    Basin& extension = order ? otherBasin : basin;
 
-                    basins.erase(otherSink);
+                    mergeTo(terrain, sinks, base, extension);
+                    fillBasin(terrain, sinks, base);
+                    basins.erase(extension.sink);
+
                     auto otherIt = sortedBasins.begin();
                     for (; otherIt != sortedBasins.end(); ++otherIt)
                         if (&(otherIt->get()) == &otherBasin)
                             break;
 
-                    auto dist = std::distance(sortedBasins.begin(), it);
-                    if (it > otherIt)
+                    auto baseIt = order ? it : otherIt;
+                    auto extIt = order ? otherIt : it;
+
+                    auto dist = std::distance(sortedBasins.begin(), baseIt);
+                    if (baseIt > extIt)
                         --dist;
-                    sortedBasins.erase(otherIt);
+                    sortedBasins.erase(extIt);
                     it = std::next(sortedBasins.begin(), dist);
-                    std::sort(sortedBasins.begin(), it + 1, waterLevelComp);
+                    std::sort(sortedBasins.begin(), baseIt + 1, waterLevelComp);
 
                     hasChanged = true;
                 }
@@ -349,17 +356,14 @@ bool mergeBasins(const MapF& terrain, Map<Index>& sinks,
     return hasChanged;
 }
 
-void verify(const MapF& terrain, const MapF& precipitation,
-            const MapF& water, const std::vector<BasinRef>& basins);
-
-MapF addWater(const MapF& terrain, const MapF& precipitation)
+MapF addWater(const MapF& terrain, const MapF& precipitation, float depthThreshold)
 {
     auto start = std::chrono::high_resolution_clock::now();
 
     auto indices = sortedByHeight(terrain);
     auto sinks = computeSinks(terrain, indices);
     auto basins = computeBasins(terrain, precipitation, indices, sinks);
-    std::cout << basins.size() << " initial basins";
+    std::cout << basins.size() << " initial basins\n";
 
     std::vector<BasinRef> sortedBasins;
     for (auto& [sink, basin] : basins) {
@@ -375,29 +379,28 @@ MapF addWater(const MapF& terrain, const MapF& precipitation)
         hasChanged = mergeBasins(terrain, sinks, basins, sortedBasins);
         ++i;
     }
-    std::cout << "after " << i << " rounds "  << basins.size() << " are basins left";
+    std::cout << "after " << i << " rounds "  << basins.size() << " are basins left\n";
 
     MapF water(terrain.width(), terrain.height(), 0);
     for (auto& [sink, basin] : basins) {
-        (void)sink;
-        for (auto i = 0u; i < basin.filledTiles; ++i) {
-            auto index = basin.indices[i];
-            water[index] = basin.waterLevel - terrain[index];
-        }
+        float basinDepth = basin.waterLevel - terrain[sink];
+        if (basinDepth > depthThreshold)
+            for (auto i = 0u; i < basin.filledTiles; ++i) {
+                auto index = basin.indices[i];
+                water[index] = basin.waterLevel - terrain[index];
+            }
     }
 
     auto end = std::chrono::high_resolution_clock::now();
     using Unit = std::chrono::milliseconds;
     auto duration = std::chrono::duration_cast<Unit>(end - start);
-    std::cout << "time: " << duration.count() << " ms";
-
-    verify(terrain, precipitation, water, sortedBasins);
+    std::cout << "time: " << duration.count() << " ms\n";
 
     return water;
 }
 
 void verify(const MapF& terrain, const MapF& precipitation,
-            const MapF& water, const std::vector<BasinRef>& basins)
+            const MapF& water)
 {
     for (std::size_t x = 0; x < terrain.width(); ++x)
         for (std::size_t y = 1; y < terrain.height(); ++y) {
@@ -408,15 +411,15 @@ void verify(const MapF& terrain, const MapF& precipitation,
 
             if (h1 > h2 + w2) {
                 if(not isZero(w1))
-                    std::cerr << "water not zero at (" << x - 1 << ", " << y << ")";
+                    std::cerr << "water not zero at (" << x - 1 << ", " << y << ")\n";
             }
             else if (h2 > h1 + w1) {
                 if(not isZero(w2))
-                    std::cerr << "water not zero at (" << x << ", " << y << ")";
+                    std::cerr << "water not zero at (" << x << ", " << y << ")\n";
             }
             else {
                 if(not isEqual(h1 + w1, h2 + w2))
-                    std::cerr << "water not even at (" << x << ", " << y << ")";
+                    std::cerr << "water not even at (" << x << ", " << y << ")\n";
             }
         }
     for (std::size_t x = 1; x < terrain.width(); ++x)
@@ -428,15 +431,15 @@ void verify(const MapF& terrain, const MapF& precipitation,
 
             if (h1 > h2 + w2) {
                 if(not isZero(w1))
-                    std::cerr << "water not zero at (" << x << ", " << y - 1 << ")";
+                    std::cerr << "water not zero at (" << x << ", " << y - 1 << ")\n";
             }
             else if (h2 > h1 + w1) {
                 if(not isZero(w2))
-                    std::cerr << "water not zero at (" << x << ", " << y << ")";
+                    std::cerr << "water not zero at (" << x << ", " << y << ")\n";
             }
             else {
                 if(not isEqual(h1 + w1, h2 + w2))
-                    std::cerr << "water not even at (" << x << ", " << y << ")";
+                    std::cerr << "water not even at (" << x << ", " << y << ")\n";
             }
         }
 
@@ -448,16 +451,8 @@ void verify(const MapF& terrain, const MapF& precipitation,
     for (float w : water)
         totalWater += w;
 
-    for (auto& basinRef : basins) {
-        auto& basin = basinRef.get();
-        if (basin.excess > 0)
-            std::cerr << "excessive basin at (" << basin.sink.x << ", "
-                      << basin.sink.y << ") with " << basin.excess <<  " water";
-
-    }
-
     if (not isEqual(totalHumidity, totalWater))
-        std::cout << "water lost: " << totalHumidity - totalWater;
+        std::cout << "water lost: " << totalHumidity - totalWater << '\n';
 }
 
 void advectHumidity(const Map2F& wind, const MapF& humidity, MapF& nextHumidity)

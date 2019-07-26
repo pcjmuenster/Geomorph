@@ -26,9 +26,20 @@ void diffuseWater(const MapF& terrain, MapF& water, int iterations);
  * is computed in a more direct manner which leads to an exact result
  * @param terrain
  * @param precipitation
+ * @param depthThreshold the minimum depth for water basins;
+ *                       more shallow pits will be removed
  * @return
  */
-MapF addWater(const MapF& terrain, const MapF& precipitation);
+MapF addWater(const MapF& terrain, const MapF& precipitation, float depthThreshold = 0);
+
+/**
+ * @brief verify check the result of addWater (with depthThreshold = 0)
+ *               for inconsistencies
+ * @param terrain
+ * @param precipitation
+ * @param water
+ */
+void verify(const MapF& terrain, const MapF& precipitation, const MapF& water);
 
 void advectHumidity(const Map2F& wind, MapF& humidity, int iterations);
 
