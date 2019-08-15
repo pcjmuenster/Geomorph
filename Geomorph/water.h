@@ -28,9 +28,13 @@ void diffuseWater(const MapF& terrain, MapF& water, int iterations);
  * @param precipitation
  * @param depthThreshold the minimum depth for water basins;
  *                       more shallow pits will be removed
- * @return
+ * @return a pair of floating-point Maps of the same size as terrain where
+ *         the first MapF denotes the amount of stationary water and
+ *         the second denotes the amount of flowing water
+ *         -- the two are mutually exclusive
  */
-MapF addWater(const MapF& terrain, const MapF& precipitation, float depthThreshold = 0);
+MapF/*std::pair<MapF, MapF>*/ addWater(const MapF& terrain, const MapF& precipitation,
+                               float depthThreshold = 0);
 
 /**
  * @brief verify check the result of addWater (with depthThreshold = 0)
@@ -40,6 +44,8 @@ MapF addWater(const MapF& terrain, const MapF& precipitation, float depthThresho
  * @param water
  */
 void verify(const MapF& terrain, const MapF& precipitation, const MapF& water);
+
+void addRivers(MapF& terrain, MapF& water);
 
 void advectHumidity(const Map2F& wind, MapF& humidity, int iterations);
 

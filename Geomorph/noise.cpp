@@ -16,16 +16,19 @@ void normalize(MapF& noise)
         value = (value - min) * factor;
 }
 
-MapF makeNoise(std::size_t width, std::size_t height, float roughness)
+MapF makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
 {
-    auto time = std::chrono::high_resolution_clock::now();
-    auto seed = unsigned(time.time_since_epoch().count());    
-    std::default_random_engine eng{seed};
+    auto seed = params.seed;
+    if (seed == -1u) {
+        auto time = std::chrono::high_resolution_clock::now();
+        seed = unsigned(time.time_since_epoch().count());
+    }
+    std::default_random_engine eng{seed};    
 
-    auto makeDevice = [roughness](std::size_t level) {
+    auto makeDevice = [&params](std::size_t level) {
         constexpr std::size_t max_amplitude_level = 7;
         auto exp = max_amplitude_level - std::min(level, max_amplitude_level);
-        float range = std::pow(roughness, float(exp));
+        float range = std::pow(params.roughness, float(exp));
         return std::uniform_real_distribution<float>{-range, range};
     };
 
@@ -97,8 +100,8 @@ MapF perturbed(const MapF& map)
     auto height = map.height();
 
     MapF result(width, height);
-    auto xNoise = makeNoise(width, height, 0.5f);
-    auto yNoise = makeNoise(width, height, 0.5f);
+    auto xNoise = makeNoise(width, height);
+    auto yNoise = makeNoise(width, height);
 
     float magnitude = 0.25f * width;
 
