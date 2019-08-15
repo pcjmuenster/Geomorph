@@ -20,7 +20,7 @@ void diffuseWater(const MapF& terrain, MapF& water, std::size_t x, std::size_t y
     totalWater += water[  x  ][y + 1];
     totalWater += water[x + 1][  y  ];
     totalWater += water[x + 1][y + 1];
-    if (totalWater < 0.001f)
+    if (isZero(totalWater))
         return;
 
     float heights[4] {
@@ -320,7 +320,7 @@ bool mergeBasins(const MapF& terrain, Map<Index>& sinks,
                 Index neighbor = basin.excessPoint.value();
                 Index otherSink = sinks[neighbor];
                 Basin& otherBasin = basins[otherSink];
-                if (std::abs(otherBasin.waterLevel - basin.waterLevel) < 0.0001f) {                    
+                if (isEqual(otherBasin.waterLevel, basin.waterLevel)) {
                     bool order = terrain[basin.sink] < terrain[otherSink];
                     Basin& base = order ? basin : otherBasin;
                     Basin& extension = order ? otherBasin : basin;
@@ -334,17 +334,19 @@ bool mergeBasins(const MapF& terrain, Map<Index>& sinks,
                         if (&(otherIt->get()) == &otherBasin)
                             break;
 
-                    auto baseIt = order ? it : otherIt;
                     auto extIt = order ? otherIt : it;
-
-                    auto dist = std::distance(sortedBasins.begin(), baseIt);
-                    if (baseIt > extIt)
+                    auto dist = std::distance(sortedBasins.begin(), it);
+                    if (extIt < it)
                         --dist;
                     sortedBasins.erase(extIt);
-                    it = std::next(sortedBasins.begin(), dist);
-                    std::sort(sortedBasins.begin(), baseIt + 1, waterLevelComp);
 
                     hasChanged = true;
+
+                    it = std::next(sortedBasins.begin(), dist);
+                    if (it == sortedBasins.end())
+                        return true;
+
+                    std::sort(sortedBasins.begin(), sortedBasins.end(), waterLevelComp);
                 }
             }
             else {
