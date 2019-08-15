@@ -1,11 +1,11 @@
-#include "noise.h"
+#include "geomorph/noise.h"
 
 #include <algorithm>
 #include <chrono>
 #include <random>
 
-#include "map.h"
-#include "math_utils.h"
+#include "geomorph/map.h"
+#include "geomorph/math_utils.h"
 
 void normalize(MapF& noise)
 {

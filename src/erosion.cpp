@@ -1,9 +1,9 @@
-#include "erosion.h"
+#include "geomorph/erosion.h"
 
 #include <cmath>
 #include <random>
 
-#include "map.h"
+#include "geomorph/map.h"
 
 void erodeFluvial(MapF& terrain, int samples)
 {

@@ -91,6 +91,6 @@ private:
     Field values_;
 };
 
-#include "map.cpp"
+#include "map.inl.h"
 
 #endif // MAP_H

@@ -1,4 +1,4 @@
-#include "water.h"
+#include "geomorph/water.h"
 
 #include <algorithm>
 #include <chrono>
@@ -9,9 +9,9 @@
 #include <set>
 #include <tuple>
 
-#include "map.h"
-#include "math_utils.h"
-#include "vec2f.h"
+#include "geomorph/map.h"
+#include "geomorph/math_utils.h"
+#include "geomorph/vec2f.h"
 
 void diffuseWater(const MapF& terrain, MapF& water, std::size_t x, std::size_t y)
 {
