@@ -5,7 +5,7 @@
 
 #include "geomorph/map.h"
 
-void erodeFluvial(MapF& terrain, int samples)
+void erodeFluvial(DMap& terrain, int samples)
 {
     const auto mapWidth = terrain.width();
     const auto mapHeight = terrain.height();
@@ -18,16 +18,16 @@ void erodeFluvial(MapF& terrain, int samples)
         auto x = xDev(eng);
         auto y = yDev(eng);
 
-        float h = terrain[x][y];
-        float sediment = 0;
-        float volume = 0.3f;
-        float speed = 0;
+        double h = terrain[x][y];
+        double sediment = 0;
+        double volume = 0.3;
+        double speed = 0;
         while (true) {
             auto nextX = x;
             auto nextY = y;
-            float currMin = std::numeric_limits<float>::max();
+            double currMin = std::numeric_limits<double>::max();
             if (x > 0) {
-                float neighbor = terrain[x - 1][y];
+                double neighbor = terrain[x - 1][y];
                 if (neighbor < currMin) {
                     currMin = neighbor;
                     nextX = x - 1;
@@ -35,7 +35,7 @@ void erodeFluvial(MapF& terrain, int samples)
                 }
             }
             if (x + 1 < mapWidth) {
-                float neighbor = terrain[x + 1][y];
+                double neighbor = terrain[x + 1][y];
                 if (neighbor < currMin) {
                     currMin = neighbor;
                     nextX = x + 1;
@@ -43,7 +43,7 @@ void erodeFluvial(MapF& terrain, int samples)
                 }
             }
             if (y > 0) {
-                float neighbor = terrain[x][y - 1];
+                double neighbor = terrain[x][y - 1];
                 if (neighbor < currMin) {
                     currMin = neighbor;
                     nextX = x;
@@ -51,7 +51,7 @@ void erodeFluvial(MapF& terrain, int samples)
                 }
             }
             if (y + 1 < mapHeight) {
-                float neighbor = terrain[x][y + 1];
+                double neighbor = terrain[x][y + 1];
                 if (neighbor < currMin) {
                     currMin = neighbor;
                     nextX = x;
@@ -61,38 +61,38 @@ void erodeFluvial(MapF& terrain, int samples)
 
             if (currMin < h) {
                 h = currMin;
-                float diff = terrain[x][y] - h;
-                speed = 0.3f * speed + 0.7f * diff;
-                float capacity = volume * speed; // TODO;
+                double diff = terrain[x][y] - h;
+                speed = 0.3 * speed + 0.7 * diff;
+                double capacity = volume * speed; // TODO;
                 if (sediment > capacity) {
                     // dispose
-                    float delta = 0.3f * (sediment - capacity);
+                    double delta = 0.3 * (sediment - capacity);
                     terrain[x][y] += delta;
                     sediment -= delta;
                 }
                 else {
                     // erode
-                    float delta = std::min(0.5f * (capacity - sediment), diff - 0.001f);
-                    terrain[x][y] -= 0.5f * delta;
+                    double delta = std::min(0.5 * (capacity - sediment), diff - 0.001);
+                    terrain[x][y] -= 0.5 * delta;
                     bool horizontalFlow = x - nextX != 0;
                     if (horizontalFlow) {
                         if (y > 0)
-                            terrain[x][y - 1] -= 0.25f * delta;
+                            terrain[x][y - 1] -= 0.25 * delta;
                         if (y + 1 < mapHeight)
-                            terrain[x][y + 1] -= 0.25f * delta;
+                            terrain[x][y + 1] -= 0.25 * delta;
                     }
                     else {
                         if (x > 0)
-                            terrain[x - 1][y] -= 0.25f * delta;
+                            terrain[x - 1][y] -= 0.25 * delta;
                         if (x + 1 < mapWidth)
-                            terrain[x + 1][y] -= 0.25f * delta;
+                            terrain[x + 1][y] -= 0.25 * delta;
                     }
 
 
                     sediment += delta;
                 }
 
-                volume *= 0.975f;
+                volume *= 0.975;
 
                 x = nextX;
                 y = nextY;
@@ -100,7 +100,7 @@ void erodeFluvial(MapF& terrain, int samples)
             else {
                 // end flow
                 if (currMin - h < sediment)
-                    terrain[x][y] = currMin + 0.001f;
+                    terrain[x][y] = currMin + 0.001;
                 else
                     terrain[x][y] += sediment;
 
@@ -110,11 +110,11 @@ void erodeFluvial(MapF& terrain, int samples)
     }
 }
 
-void erodeThermal(MapF& terrain, int samples)
+void erodeThermal(DMap& terrain, int samples)
 {
     const auto mapWidth = terrain.width();
     const auto mapHeight = terrain.height();
-    const float talus = 2.f / std::min(mapWidth, mapHeight);
+    const double talus = 2.0 / std::min(mapWidth, mapHeight);
 
     std::default_random_engine eng{};
     std::uniform_int_distribution<size_t> xDev{1, mapWidth - 2};
@@ -123,15 +123,15 @@ void erodeThermal(MapF& terrain, int samples)
     for (int i = 0; i < samples; ++i) {
         auto x = xDev(eng);
         auto y = yDev(eng);
-        float h = terrain[x][y];
-        float maxSlide = 0;
-        float slides[3][3] = {};
+        double h = terrain[x][y];
+        double maxSlide = 0;
+        double slides[3][3] = {};
         for (std::size_t i = 0; i < 3; ++i)
             for (std::size_t j = 0; j < 3; ++j) {
                 if (i == 1 && j == 1) // ignore center
                     continue;
-                float diff = h - terrain[x + i - 1][y + j - 1];
-                float dist = std::hypot(i - 1.f, j - 1.f);
+                double diff = h - terrain[x + i - 1][y + j - 1];
+                double dist = std::hypot(i - 1.0, j - 1.0);
                 if (diff > talus * dist) {
                     slides[i][j] = (diff - talus) / 2;
                     if (diff > maxSlide)
@@ -139,9 +139,9 @@ void erodeThermal(MapF& terrain, int samples)
                 }
             }
 
-        if (maxSlide > 0.01f) {
-            maxSlide *= 0.5f;
-            float totalSlide = 0;
+        if (maxSlide > 0.01) {
+            maxSlide *= 0.5;
+            double totalSlide = 0;
             for (std::size_t i = 0; i < 3; ++i)
                 for (std::size_t j = 0; j < 3; ++j)
                     totalSlide += slides[i][j];

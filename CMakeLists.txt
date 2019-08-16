@@ -12,14 +12,14 @@ set(HEADERS
     "include/geomorph/map_fwd.h"
     "include/geomorph/math_utils.h"
     "include/geomorph/noise.h"
-    "include/geomorph/vec2f.h"
+    "include/geomorph/vec2.h"
     "include/geomorph/water.h")
 
 set(SOURCES
     "src/erosion.cpp"    
     "src/math_utils.cpp"
     "src/noise.cpp"
-    "src/vec2f.cpp"
+    "src/vec2.cpp"
     "src/water.cpp")
 
 add_library(geomorph-lib STATIC ${SOURCES} ${HEADERS})

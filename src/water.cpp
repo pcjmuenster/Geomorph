@@ -11,11 +11,11 @@
 
 #include "geomorph/map.h"
 #include "geomorph/math_utils.h"
-#include "geomorph/vec2f.h"
+#include "geomorph/vec2.h"
 
-void diffuseWater(const MapF& terrain, MapF& water, std::size_t x, std::size_t y)
+void diffuseWater(const DMap& terrain, DMap& water, std::size_t x, std::size_t y)
 {
-    float totalWater = 0;
+    double totalWater = 0;
     totalWater += water[  x  ][  y  ];
     totalWater += water[  x  ][y + 1];
     totalWater += water[x + 1][  y  ];
@@ -23,17 +23,17 @@ void diffuseWater(const MapF& terrain, MapF& water, std::size_t x, std::size_t y
     if (isZero(totalWater))
         return;
 
-    float heights[4] {
+    double heights[4] {
         terrain[  x  ][  y  ],
         terrain[  x  ][y + 1],
         terrain[x + 1][  y  ],
         terrain[x + 1][y + 1]
     };
     std::sort(heights, heights + 4);
-    float level = heights[0];
+    double level = heights[0];
     int tiles = 1;
     for (int i = 1; i < 4; ++i) {
-        float neededWater = (heights[i] - level) * i;
+        double neededWater = (heights[i] - level) * i;
         if (neededWater < totalWater) {
             totalWater -= neededWater;
             level = heights[i];
@@ -51,9 +51,9 @@ void diffuseWater(const MapF& terrain, MapF& water, std::size_t x, std::size_t y
     riseWater(x + 1, y + 1);
 }
 
-void diffuseWater(const MapF& terrain, MapF& water, int iterations)
+void diffuseWater(const DMap& terrain, DMap& water, int iterations)
 {
-    MapF oldWater = water;
+    DMap oldWater = water;
 
     auto width = terrain.width();
     auto height = terrain.height();
@@ -68,23 +68,23 @@ void diffuseWater(const MapF& terrain, MapF& water, int iterations)
             }
     }
 
-    float max = 0;
+    double max = 0;
     for (auto x = 0u; x < width - 1; ++x)
         for (auto y = 0u; y < height - 1; ++y) {
-            float diff = std::abs(water[x][y] - oldWater[x][y]);
+            double diff = std::abs(water[x][y] - oldWater[x][y]);
             if (diff > max)
                 max = diff;
         }
 }
 
-auto makeHeightComp(const MapF& map)
+auto makeHeightComp(const DMap& map)
 {
     return [&map](const Index& lhs, const Index& rhs) {
         return std::make_tuple(map[lhs], lhs) < std::make_tuple(map[rhs], rhs);
     };
 }
 
-std::vector<Index> sortedByHeight(const MapF& terrain)
+std::vector<Index> sortedByHeight(const DMap& terrain)
 {
     auto comp = makeHeightComp(terrain);
 
@@ -98,7 +98,7 @@ std::vector<Index> sortedByHeight(const MapF& terrain)
     return indices;
 }
 
-Map<Index> computeSinks(const MapF& terrain, const std::vector<Index>& indices)
+Map<Index> computeSinks(const DMap& terrain, const std::vector<Index>& indices)
 {
     Map<Index> sinks(terrain.width(), terrain.height());
     for (auto& index : indices) {
@@ -132,17 +132,17 @@ struct Basin {
     std::vector<Index> indices;
     std::size_t filledTiles = 0;
     std::optional<Index> excessPoint;
-    float waterLevel = 0;
-    float excess = 0;
+    double waterLevel = 0;
+    double excess = 0;
 };
 using BasinRef = std::reference_wrapper<Basin>;
 
-std::optional<Index> lowestForeignNeighbor(const MapF& terrain,
+std::optional<Index> lowestForeignNeighbor(const DMap& terrain,
                                            const Map<Index>& sinks,
                                            const Index& index)
 {
     std::optional<Index> neighbor;
-    auto h = std::numeric_limits<float>::max();
+    auto h = std::numeric_limits<double>::max();
 
     auto checkNeigbor = [&](std::size_t x_, std::size_t y_) {
         if (terrain[x_][y_] < h && sinks[x_][y_] != sinks[index]) {
@@ -165,9 +165,9 @@ std::optional<Index> lowestForeignNeighbor(const MapF& terrain,
     return neighbor;
 }
 
-void fillBasin(const MapF& terrain, const Map<Index>& sinks, Basin& basin)
+void fillBasin(const DMap& terrain, const Map<Index>& sinks, Basin& basin)
 {
-    float lowestNeighborHeight = std::numeric_limits<float>::max();
+    double lowestNeighborHeight = std::numeric_limits<double>::max();
     if (basin.excessPoint.has_value())
         lowestNeighborHeight = terrain[basin.excessPoint.value()];
     if (lowestNeighborHeight < basin.waterLevel)
@@ -175,9 +175,9 @@ void fillBasin(const MapF& terrain, const Map<Index>& sinks, Basin& basin)
 
     for (auto i = basin.filledTiles; i < basin.indices.size(); ++i) {
         auto& index = basin.indices[i];
-        float maxHeight = std::min(terrain[index], lowestNeighborHeight);
-        float levelDiff = maxHeight - basin.waterLevel;
-        float neededWater = levelDiff * basin.filledTiles;
+        double maxHeight = std::min(terrain[index], lowestNeighborHeight);
+        double levelDiff = maxHeight - basin.waterLevel;
+        double neededWater = levelDiff * basin.filledTiles;
         if (neededWater <= basin.excess) {
             basin.excess -= neededWater;
             basin.waterLevel = maxHeight;
@@ -207,8 +207,8 @@ void fillBasin(const MapF& terrain, const Map<Index>& sinks, Basin& basin)
             ++basin.filledTiles;
     }
     if (basin.filledTiles == basin.indices.size()) {
-        float levelDiff = lowestNeighborHeight - basin.waterLevel;
-        float neededWater = levelDiff * basin.filledTiles;
+        double levelDiff = lowestNeighborHeight - basin.waterLevel;
+        double neededWater = levelDiff * basin.filledTiles;
         if (neededWater <= basin.excess) {
             basin.excess -= neededWater;
             basin.waterLevel = lowestNeighborHeight;
@@ -220,8 +220,8 @@ void fillBasin(const MapF& terrain, const Map<Index>& sinks, Basin& basin)
     }
 }
 
-std::map<Index, Basin> computeBasins(const MapF& terrain,
-                                     const MapF& precipitation,
+std::map<Index, Basin> computeBasins(const DMap& terrain,
+                                     const DMap& precipitation,
                                      const std::vector<Index>& sortedIndices,
                                      const Map<Index>& sinks)
 {
@@ -245,7 +245,7 @@ bool waterLevelComp(const Basin& lhs, const Basin& rhs) {
     return lhs.waterLevel > rhs.waterLevel;
 }
 
-void transferExcesses(const MapF& terrain,
+void transferExcesses(const DMap& terrain,
                       const Map<Index>& sinks,
                       std::map<Index, Basin>& basins,
                       std::vector<BasinRef>& sortedBasins)
@@ -262,9 +262,9 @@ void transferExcesses(const MapF& terrain,
                 otherBasin.excess += basin.excess;
                 basin.excess = 0;
                 if (update) {
-                    float oldWater = otherBasin.waterLevel;
+                    double oldWater = otherBasin.waterLevel;
                     fillBasin(terrain, sinks, otherBasin);
-                    float newWater = otherBasin.waterLevel;
+                    double newWater = otherBasin.waterLevel;
 
                     if (!isEqual(oldWater, newWater)) {
                         std::sort(it + 1, sortedBasins.end(), waterLevelComp);
@@ -279,7 +279,7 @@ void transferExcesses(const MapF& terrain,
     }
 }
 
-void mergeTo(const MapF& terrain, Map<Index>& sinks,
+void mergeTo(const DMap& terrain, Map<Index>& sinks,
              Basin& base, Basin& extension)
 {
     base.indices.insert(base.indices.end(),
@@ -295,7 +295,7 @@ void mergeTo(const MapF& terrain, Map<Index>& sinks,
     base.excess += extension.excess;
 
     base.excessPoint = std::nullopt;
-    float lowestNeighborHeight = std::numeric_limits<float>::max();
+    double lowestNeighborHeight = std::numeric_limits<double>::max();
     for (auto i = 0u; i < base.filledTiles; ++i) {
         auto neighbor = lowestForeignNeighbor(terrain, sinks, base.indices[i]);
         if (neighbor.has_value()) {
@@ -308,7 +308,7 @@ void mergeTo(const MapF& terrain, Map<Index>& sinks,
     }
 }
 
-bool mergeBasins(const MapF& terrain, Map<Index>& sinks,
+bool mergeBasins(const DMap& terrain, Map<Index>& sinks,
                  std::map<Index, Basin>& basins,
                  std::vector<BasinRef>& sortedBasins)
 {
@@ -358,7 +358,7 @@ bool mergeBasins(const MapF& terrain, Map<Index>& sinks,
     return hasChanged;
 }
 
-MapF addWater(const MapF& terrain, const MapF& precipitation, float depthThreshold)
+DMap addWater(const DMap& terrain, const DMap& precipitation, double depthThreshold)
 {
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -383,9 +383,9 @@ MapF addWater(const MapF& terrain, const MapF& precipitation, float depthThresho
     }
     std::cout << "after " << i << " rounds "  << basins.size() << " are basins left\n";
 
-    MapF water(terrain.width(), terrain.height(), 0);
+    DMap water(terrain.width(), terrain.height(), 0);
     for (auto& [sink, basin] : basins) {
-        float basinDepth = basin.waterLevel - terrain[sink];
+        double basinDepth = basin.waterLevel - terrain[sink];
         if (basinDepth > depthThreshold)
             for (auto i = 0u; i < basin.filledTiles; ++i) {
                 auto index = basin.indices[i];
@@ -401,15 +401,15 @@ MapF addWater(const MapF& terrain, const MapF& precipitation, float depthThresho
     return water;
 }
 
-void verify(const MapF& terrain, const MapF& precipitation,
-            const MapF& water)
+void verify(const DMap& terrain, const DMap& precipitation,
+            const DMap& water)
 {
     for (std::size_t x = 0; x < terrain.width(); ++x)
         for (std::size_t y = 1; y < terrain.height(); ++y) {
-            float h1 = terrain[x][y - 1];
-            float h2 = terrain[x][  y  ];
-            float w1 = water[x][y - 1];
-            float w2 = water[x][  y  ];
+            double h1 = terrain[x][y - 1];
+            double h2 = terrain[x][  y  ];
+            double w1 = water[x][y - 1];
+            double w2 = water[x][  y  ];
 
             if (h1 > h2 + w2) {
                 if(not isZero(w1))
@@ -426,10 +426,10 @@ void verify(const MapF& terrain, const MapF& precipitation,
         }
     for (std::size_t x = 1; x < terrain.width(); ++x)
         for (std::size_t y = 0; y < terrain.height(); ++y) {
-            float h1 = terrain[x - 1][y];
-            float h2 = terrain[  x  ][y];
-            float w1 = water[x - 1][y];
-            float w2 = water[  x  ][y];
+            double h1 = terrain[x - 1][y];
+            double h2 = terrain[  x  ][y];
+            double w1 = water[x - 1][y];
+            double w2 = water[  x  ][y];
 
             if (h1 > h2 + w2) {
                 if(not isZero(w1))
@@ -445,46 +445,46 @@ void verify(const MapF& terrain, const MapF& precipitation,
             }
         }
 
-    float totalHumidity = 0;
-    for (float h : precipitation)
+    double totalHumidity = 0;
+    for (double h : precipitation)
         totalHumidity += h;
 
-    float totalWater = 0;
-    for (float w : water)
+    double totalWater = 0;
+    for (double w : water)
         totalWater += w;
 
     if (not isEqual(totalHumidity, totalWater))
         std::cout << "water lost: " << totalHumidity - totalWater << '\n';
 }
 
-void advectHumidity(const Map2F& wind, const MapF& humidity, MapF& nextHumidity)
+void advectHumidity(const D2Map& wind, const DMap& humidity, DMap& nextHumidity)
 {
-    float dt = .6f;
+    double dt = .6;
     for (std::size_t x = 0; x < humidity.width(); ++x)
         for (std::size_t y = 0; y < humidity.height(); ++y) {
-            float originalX = x - dt * wind[x][y].x + humidity.width();
-            float originalY = y - dt * wind[x][y].y + humidity.height();
+            double originalX = x - dt * wind[x][y].x + humidity.width();
+            double originalY = y - dt * wind[x][y].y + humidity.height();
 
             auto x0 = std::size_t(originalX);
             auto y0 = std::size_t(originalY);
-            float u = originalX - x0;
-            float v = originalY - y0;
+            double u = originalX - x0;
+            double v = originalY - y0;
             x0 %= humidity.width();
             y0 %= humidity.height();
             auto x1 = (x0 + 1) % humidity.width();
             auto y1 = (y0 + 1) % humidity.height();            
-            float humid = 0;
+            double humid = 0;
             humid += (1 - u) * (1 - v) * humidity[x0][y0];
             humid += (1 - u) *    v    * humidity[x0][y1];
             humid +=    u    * (1 - v) * humidity[x1][y0];
             humid +=    u    *    v    * humidity[x1][y1];
-            nextHumidity[x][y] = humid + 0.5f * (humidity[x][y] - humid);
+            nextHumidity[x][y] = humid + 0.5 * (humidity[x][y] - humid);
         }
 }
 
-void advectHumidity(const Map2F& wind, MapF& humidity, int iterations)
+void advectHumidity(const D2Map& wind, DMap& humidity, int iterations)
 {    
-    MapF nextHumidity(humidity.width(), humidity.height());
+    DMap nextHumidity(humidity.width(), humidity.height());
     for (int i = 0; i < iterations / 2; ++i) {
         advectHumidity(wind, humidity, nextHumidity);
         advectHumidity(wind, nextHumidity, humidity);

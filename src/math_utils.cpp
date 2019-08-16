@@ -4,17 +4,17 @@
 #include <cmath>
 #include <limits>
 
-bool isZero(float f)
-{
-    return std::abs(f) < std::numeric_limits<float>::epsilon();
+bool isZero(double f)
+{    
+    return std::abs(f) < 1e-9;
 }
 
-bool isEqual(float lhs, float rhs)
+bool isEqual(double lhs, double rhs)
 {
     return isZero(lhs - rhs);
 }
 
-float clamp(float min, float value, float max)
+double clamp(double min, double value, double max)
 {
     return std::min(std::max(min, value), max);
 }

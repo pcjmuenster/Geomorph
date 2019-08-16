@@ -1,17 +1,17 @@
-#ifndef VEC2F_H
-#define VEC2F_H
+#ifndef VEC2_H
+#define VEC2_H
 
 /* A class that represents a two-diamensional vector, currently no additional
  * functionality is needed -- which this kind of useless.
  */
 
-class Vec2F
+class Vec2
 {
 public:
-    Vec2F() = default;
-    Vec2F(float x, float y);
+    Vec2() = default;
+    Vec2(double x, double y);
 
-    float x, y;
+    double x, y;
 };
 
-#endif // VEC2F_H
+#endif // VEC2_H

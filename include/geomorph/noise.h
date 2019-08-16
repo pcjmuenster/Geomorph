@@ -24,8 +24,8 @@ struct NoiseParams {
  * @param roughness determines how smooth (smaller values) or rough (larger) the
  *                  resulting noise is; values should be chosen between 0.5 and 1.5
  */
-MapF makeNoise(std::size_t width, std::size_t height, const NoiseParams& = NoiseParams{});
+DMap makeNoise(std::size_t width, std::size_t height, const NoiseParams& = NoiseParams{});
 
-MapF perturbed(const MapF& map);
+DMap perturbed(const DMap& map);
 
 #endif // NOISE_H

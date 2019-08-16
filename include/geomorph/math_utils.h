@@ -1,9 +1,9 @@
 #ifndef MATH_UTILS_H
 #define MATH_UTILS_H
 
-bool isZero(float f);
-bool isEqual(float lhs, float rhs);
+bool isZero(double f);
+bool isEqual(double lhs, double rhs);
 
-float clamp(float min, float value, float max);
+double clamp(double min, double value, double max);
 
 #endif // MATH_UTILS_H

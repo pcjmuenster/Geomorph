@@ -7,7 +7,7 @@
 #include "geomorph/map.h"
 #include "geomorph/math_utils.h"
 
-void normalize(MapF& noise)
+void normalize(DMap& noise)
 {
     auto minmax = std::minmax_element(noise.begin(), noise.end());       
     auto min = *minmax.first;
@@ -16,7 +16,7 @@ void normalize(MapF& noise)
         value = (value - min) * factor;
 }
 
-MapF makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
+DMap makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
 {
     auto seed = params.seed;
     if (seed == 0) {
@@ -35,7 +35,7 @@ MapF makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
     auto size = std::max(width, height);
     std::size_t levelOfDetail = std::size_t(std::ceil(std::log2(size - 1)));
     size = (1 << levelOfDetail) + 1;
-    MapF noise(size, size);
+    DMap noise(size, size);
     /* initialize corners */ {
         auto dev = makeDevice(levelOfDetail);
         noise[    0   ][    0   ] = dev(eng);
@@ -94,12 +94,12 @@ MapF makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
     return noise;
 }
 
-MapF perturbed(const MapF& map)
+DMap perturbed(const DMap& map)
 {
     auto width = map.width();
     auto height = map.height();
 
-    MapF result(width, height);
+    DMap result(width, height);
     auto xNoise = makeNoise(width, height);
     auto yNoise = makeNoise(width, height);
 

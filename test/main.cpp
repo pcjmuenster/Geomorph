@@ -9,9 +9,9 @@ int main()
 {
     NoiseParams params;
     params.seed = 4711;
-    MapF terrain = makeNoise(100, 100, params);
-    MapF precipitation = MapF(terrain.width(), terrain.height(), 0.1f);
-    MapF water = addWater(terrain, precipitation);
+    DMap terrain = makeNoise(100, 100, params);
+    DMap precipitation = DMap(terrain.width(), terrain.height(), 0.1);
+    DMap water = addWater(terrain, precipitation);
 
     verify(terrain, precipitation, water);
 

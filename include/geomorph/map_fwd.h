@@ -6,8 +6,8 @@ struct Index;
 template <class T>
 class Map;
 
-using MapF = Map<float>;
-class Vec2F;
-using Map2F = Map<Vec2F>;
+using DMap = Map<double>;
+class Vec2;
+using D2Map = Map<Vec2>;
 
 #endif // MAP_FWD_H

@@ -14,7 +14,7 @@
  * @param water
  * @param iterations
  */
-void diffuseWater(const MapF& terrain, MapF& water, int iterations);
+void diffuseWater(const DMap& terrain, DMap& water, int iterations);
 
 /**
  * @brief computes the equilibrium of the water distributed according to
@@ -30,7 +30,7 @@ void diffuseWater(const MapF& terrain, MapF& water, int iterations);
  *                       more shallow pits will be removed
  * @return
  */
-MapF addWater(const MapF& terrain, const MapF& precipitation, float depthThreshold = 0);
+DMap addWater(const DMap& terrain, const DMap& precipitation, double depthThreshold = 0);
 
 /**
  * @brief verify check the result of addWater (with depthThreshold = 0)
@@ -39,8 +39,8 @@ MapF addWater(const MapF& terrain, const MapF& precipitation, float depthThresho
  * @param precipitation
  * @param water
  */
-void verify(const MapF& terrain, const MapF& precipitation, const MapF& water);
+void verify(const DMap& terrain, const DMap& precipitation, const DMap& water);
 
-void advectHumidity(const Map2F& wind, MapF& humidity, int iterations);
+void advectHumidity(const D2Map& wind, DMap& humidity, int iterations);
 
 #endif // WATER_H
