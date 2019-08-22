@@ -32,4 +32,6 @@ Debug/
 *.out
 *.app
 build/
+
+# Device dependent files
 *.user

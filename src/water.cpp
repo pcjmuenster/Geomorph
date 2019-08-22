@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -137,6 +138,33 @@ struct Basin {
 };
 using BasinRef = std::reference_wrapper<Basin>;
 
+template <class Func>
+void forEachMooreNeighbor(const Index& index, const Size& size, Func func)
+{
+    auto x = index.x;
+    auto y = index.y;
+    bool lft = x > 0, rgt = x + 1 < size.width;
+    bool bot = y > 0, top = y + 1 < size.height;
+
+    if (lft)
+        func(x - 1, y);
+    if (rgt)
+        func(x + 1, y);
+    if (bot)
+        func(x, y - 1);
+    if (top)
+        func(x, y + 1);
+
+    if (lft && bot)
+        func(x - 1, y - 1);
+    if (lft && top)
+        func(x - 1, y + 1);
+    if (rgt && bot)
+        func(x + 1, y - 1);
+    if (rgt && top)
+        func(x + 1, y + 1);
+}
+
 std::optional<Index> lowestForeignNeighbor(const DMap& terrain,
                                            const Map<Index>& sinks,
                                            const Index& index)
@@ -150,17 +178,7 @@ std::optional<Index> lowestForeignNeighbor(const DMap& terrain,
             neighbor = {x_, y_};
         }
     };
-
-    auto x = index.x;
-    auto y = index.y;
-    if (x > 0)
-        checkNeigbor(x - 1, y);
-    if (x + 1 < terrain.width())
-        checkNeigbor(x + 1, y);
-    if (y > 0)
-        checkNeigbor(x, y - 1);
-    if (y + 1 < terrain.height())
-        checkNeigbor(x, y + 1);
+    forEachMooreNeighbor(index, terrain.size(), checkNeigbor);
 
     return neighbor;
 }
@@ -241,11 +259,12 @@ std::map<Index, Basin> computeBasins(const DMap& terrain,
     return basins;
 }
 
-bool waterLevelComp(const Basin& lhs, const Basin& rhs) {
+bool waterLevelComp(const Basin& lhs, const Basin& rhs)
+{
     return lhs.waterLevel > rhs.waterLevel;
 }
 
-void transferExcesses(const DMap& terrain,
+void transferExcesses(const DMap& terrain, DMap& flowingWater,
                       const Map<Index>& sinks,
                       std::map<Index, Basin>& basins,
                       std::vector<BasinRef>& sortedBasins)
@@ -254,12 +273,13 @@ void transferExcesses(const DMap& terrain,
         Basin& basin = it->get();
         if (basin.excess > 0) {
             if (basin.excessPoint.has_value()) {
-                Index neighbor = basin.excessPoint.value();
+                Index neighbor = basin.excessPoint.value();                
                 Index otherSink = sinks[neighbor];
                 Basin& otherBasin = basins[otherSink];
                 bool update = isZero(otherBasin.excess);
 
                 otherBasin.excess += basin.excess;
+                flowingWater[neighbor] += basin.excess;
                 basin.excess = 0;
                 if (update) {
                     double oldWater = otherBasin.waterLevel;
@@ -320,6 +340,7 @@ bool mergeBasins(const DMap& terrain, Map<Index>& sinks,
                 Index neighbor = basin.excessPoint.value();
                 Index otherSink = sinks[neighbor];
                 Basin& otherBasin = basins[otherSink];
+
                 if (isEqual(otherBasin.waterLevel, basin.waterLevel)) {
                     bool order = terrain[basin.sink] < terrain[otherSink];
                     Basin& base = order ? basin : otherBasin;
@@ -329,15 +350,29 @@ bool mergeBasins(const DMap& terrain, Map<Index>& sinks,
                     fillBasin(terrain, sinks, base);
                     basins.erase(extension.sink);
 
+//                    auto [first, last] = std::equal_range(sortedBasins.begin(),
+//                                                          sortedBasins.end(),
+//                                                          otherBasin, waterLevelComp);
+//                    auto otherIt = first;
+//                    for (; otherIt != last; ++otherIt)
+//                        if (&(otherIt->get()) == &otherBasin)
+//                            break;
+
                     auto otherIt = sortedBasins.begin();
                     for (; otherIt != sortedBasins.end(); ++otherIt)
                         if (&(otherIt->get()) == &otherBasin)
                             break;
 
                     auto extIt = order ? otherIt : it;
+
                     auto dist = std::distance(sortedBasins.begin(), it);
                     if (extIt < it)
                         --dist;
+
+//                    auto newBaseIt = std::upper_bound(sortedBasins.begin(),
+//                                                      sortedBasins.end(),
+//                                                      base, waterLevelComp);
+
                     sortedBasins.erase(extIt);
 
                     hasChanged = true;
@@ -358,14 +393,32 @@ bool mergeBasins(const DMap& terrain, Map<Index>& sinks,
     return hasChanged;
 }
 
-DMap addWater(const DMap& terrain, const DMap& precipitation, double depthThreshold)
+auto lowestNeighborByTotalHeight(const DMap& terrain, const DMap& water, Index index)
 {
-    auto start = std::chrono::high_resolution_clock::now();
+    auto totalHeight = [&] (Index index) {
+        return terrain[index] + water[index];
+    };
 
+    std::optional<Index> neighbor;
+    double min = totalHeight(index);
+    auto checkNeigbor = [&](std::size_t x_, std::size_t y_) {
+        Index nb = {x_, y_};
+        if (totalHeight(nb) < min) {
+            min = totalHeight(nb);
+            neighbor = nb;
+        }
+    };
+    forEachMooreNeighbor(index, terrain.size(), checkNeigbor);
+
+    return neighbor;
+}
+
+std::pair<DMap, DMap> addWater(const DMap& terrain, const DMap& precipitation,
+                               double depthThreshold)
+{
     auto indices = sortedByHeight(terrain);
     auto sinks = computeSinks(terrain, indices);
     auto basins = computeBasins(terrain, precipitation, indices, sinks);
-    std::cout << basins.size() << " initial basins\n";
 
     std::vector<BasinRef> sortedBasins;
     for (auto& [sink, basin] : basins) {
@@ -374,31 +427,41 @@ DMap addWater(const DMap& terrain, const DMap& precipitation, double depthThresh
     }
     std::sort(sortedBasins.begin(), sortedBasins.end(), waterLevelComp);
 
-    int i = 0;
-    bool hasChanged = true;
-    while (hasChanged) {
-        transferExcesses(terrain, sinks, basins, sortedBasins);
-        hasChanged = mergeBasins(terrain, sinks, basins, sortedBasins);
-        ++i;
-    }
-    std::cout << "after " << i << " rounds "  << basins.size() << " are basins left\n";
+    DMap flowingWater = precipitation;
 
-    DMap water(terrain.width(), terrain.height(), 0);
+    for (bool hasChanged = true; hasChanged;) {
+        transferExcesses(terrain, flowingWater, sinks, basins, sortedBasins);
+        hasChanged = mergeBasins(terrain, sinks, basins, sortedBasins);        
+    }
+
+    DMap stationaryWater(terrain.size(), 0);
     for (auto& [sink, basin] : basins) {
         double basinDepth = basin.waterLevel - terrain[sink];
         if (basinDepth > depthThreshold)
             for (auto i = 0u; i < basin.filledTiles; ++i) {
                 auto index = basin.indices[i];
-                water[index] = basin.waterLevel - terrain[index];
+                stationaryWater[index] = basin.waterLevel - terrain[index];
             }
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    using Unit = std::chrono::milliseconds;
-    auto duration = std::chrono::duration_cast<Unit>(end - start);
-    std::cout << "time: " << duration.count() << " ms\n";
+    std::vector<Index> dryIndices;
+    for (std::size_t x = 0; x < terrain.width(); ++x)
+        for (std::size_t y = 0; y < terrain.height(); ++y)
+            if (isZero(stationaryWater[x][y]))
+                dryIndices.emplace_back(x, y);
+            else
+                flowingWater[x][y] = 0;
 
-    return water;
+    std::sort(dryIndices.rbegin(), dryIndices.rend(), makeHeightComp(terrain));
+
+    for (auto index : dryIndices) {
+        auto neighbor = lowestNeighborByTotalHeight(terrain, stationaryWater, index);
+        if (neighbor && isZero(stationaryWater[neighbor.value()])) {
+            flowingWater[neighbor.value()] += flowingWater[index];
+        }
+    }
+
+    return {stationaryWater, flowingWater};
 }
 
 void verify(const DMap& terrain, const DMap& precipitation,
@@ -455,6 +518,78 @@ void verify(const DMap& terrain, const DMap& precipitation,
 
     if (not isEqual(totalHumidity, totalWater))
         std::cout << "water lost: " << totalHumidity - totalWater << '\n';
+}
+
+auto lowestMooreNeighbor(const DMap& totalHeight, const Index& c)
+{
+    Index lowestNeighbor;
+    double lowest = std::numeric_limits<double>::max();
+    for (int i = -1; i <= 1; ++i)
+        for (int j = -1; j <= 1; ++j) {
+            if (i == 0 && j == 0)
+                continue;
+            auto x = std::size_t(int(c.x) + i);
+            auto y = std::size_t(int(c.y) + j);
+            if (x < totalHeight.width() && y < totalHeight.height()) {
+                double t = totalHeight[x][y];
+                if (t < lowest) {
+                    lowestNeighbor = {x, y};
+                    lowest = t;
+                }
+            }
+        }
+    return std::make_pair(lowestNeighbor, lowest);
+};
+
+auto strahlerNumbers(const DMap& totalHeight, std::vector<Index> sortedByTotalHeight)
+{
+    Map<int> strahlerNumber(totalHeight.width(), totalHeight.height(), 1);
+    Map<int> maxPrevStrahler(totalHeight.width(), totalHeight.height(), 0);
+    for (auto it = sortedByTotalHeight.rbegin();
+            it != sortedByTotalHeight.rend(); ++it) {
+        const Index& currIndex  = *it;
+        auto [lowestIndex, lowestHeight] = lowestMooreNeighbor(totalHeight, currIndex);
+        if (lowestHeight < totalHeight[currIndex]) {
+            auto& prevStrahler = maxPrevStrahler[lowestIndex];
+            auto currStrahler = strahlerNumber[currIndex];
+            if (prevStrahler < currStrahler) {
+                prevStrahler = currStrahler;
+                strahlerNumber[lowestIndex] = currStrahler;
+            }
+            else if (prevStrahler == currStrahler) {
+                strahlerNumber[lowestIndex] = currStrahler + 1;
+            }
+        }
+    }
+    return strahlerNumber;
+}
+
+void addRivers(DMap& terrain, DMap& water)
+{
+    auto width = terrain.width();
+    auto height = terrain.height();
+    DMap totalHeight(width, height);
+    for (std::size_t x = 0; x < terrain.width(); ++x)
+        for (std::size_t y = 0; y < terrain.height(); ++y)
+            totalHeight[x][y] = terrain[x][y] + water[x][y];
+
+    auto sortedByTotalHeight = sortedByHeight(totalHeight);
+    auto strahlerNumber = strahlerNumbers(totalHeight, sortedByTotalHeight);
+
+    auto minmax = std::minmax_element(strahlerNumber.begin(), strahlerNumber.end());
+    double min = *minmax.first;
+    double max = *minmax.second;
+    for (std::size_t x = 0; x < strahlerNumber.width(); ++x)
+        for (std::size_t y = 0; y < strahlerNumber.height(); ++y) {
+            if (water[x][y] > 0)
+                continue;
+            double riverDepth = double(strahlerNumber[x][y] - min) / (max - min);
+            if (riverDepth > 0.36) {
+                riverDepth = std::pow(riverDepth - 0.08, 0.3) * 0.06;
+                terrain[x][y] -= riverDepth;
+                water[x][y] = riverDepth;
+            }
+        }
 }
 
 void advectHumidity(const D2Map& wind, const DMap& humidity, DMap& nextHumidity)

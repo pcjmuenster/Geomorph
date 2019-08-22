@@ -22,6 +22,7 @@ set(SOURCES
     "src/vec2.cpp"
     "src/water.cpp")
 
+# the library
 add_library(geomorph-lib STATIC ${SOURCES} ${HEADERS})
 target_include_directories(geomorph-lib PUBLIC "include")
 set_target_properties(geomorph-lib PROPERTIES
@@ -29,5 +30,10 @@ set_target_properties(geomorph-lib PROPERTIES
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO)
 
+# a test executable
 add_executable(geomorph-test "test/main.cpp")
 target_link_libraries(geomorph-test PRIVATE geomorph-lib)
+set_target_properties(geomorph-test PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO)

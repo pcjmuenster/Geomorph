@@ -5,6 +5,9 @@
 
 #include "map_fwd.h"
 
+/**
+ * @brief The NoiseParams struct bundles various parameters for the makeNoise function
+ */
 struct NoiseParams {
     /**
      * @brief seed will be replaced by the current time if equal to zero

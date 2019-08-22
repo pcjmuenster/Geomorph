@@ -28,8 +28,8 @@ DMap makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
     auto makeDevice = [&params](std::size_t level) {
         constexpr std::size_t max_amplitude_level = 7;
         auto exp = max_amplitude_level - std::min(level, max_amplitude_level);
-        float range = std::pow(params.roughness, float(exp));
-        return std::uniform_real_distribution<float>{-range, range};
+        double range = std::pow(params.roughness, double(exp));
+        return std::uniform_real_distribution<double>{-range, range};
     };
 
     auto size = std::max(width, height);
@@ -51,22 +51,22 @@ DMap makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
         std::size_t half = stride / 2;
         for (std::size_t x = 0; x < size - stride; x += stride) {
             for (std::size_t y = 0; y < size - stride; y += stride) {
-                float lb = noise[x         ][y         ];
-                float lt = noise[x         ][y + stride];
-                float rb = noise[x + stride][y         ];
-                float rt = noise[x + stride][y + stride];
+                double lb = noise[x         ][y         ];
+                double lt = noise[x         ][y + stride];
+                double rb = noise[x + stride][y         ];
+                double rt = noise[x + stride][y + stride];
 
-                float mm = (lb + lt + rb + rt) / 4 + dev(eng);
+                double mm = (lb + lt + rb + rt) / 4 + dev(eng);
                 noise[x + half][y + half] = mm;
 
-                float lm = lb + mm + lt;
+                double lm = lb + mm + lt;
                 if (x > 0)
                     lm = (lm + noise[x - half][y + half]) / 4;
                 else
                     lm = lm / 3;
                 noise[x][y + half] = lm + dev(eng);
 
-                float mb = lb + rb + mm;
+                double mb = lb + rb + mm;
                 if (y > 0)
                     mb = (mb + noise[x + half][y - half]) / 4;
                 else
@@ -75,12 +75,12 @@ DMap makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
 
                 // last row
                 if (y + stride == size - 1) {
-                    float mt = (lt + rt + mm)/ 3;
+                    double mt = (lt + rt + mm)/ 3;
                     noise[x + half][size - 1] = mt + dev(eng);
                 }
                 // last column
                 if (x + stride == size - 1) {
-                    float rm = (rb + rt + mm) / 3;
+                    double rm = (rb + rt + mm) / 3;
                     noise[size - 1][y + half] = rm + dev(eng);
                 }
             }
@@ -100,15 +100,16 @@ DMap perturbed(const DMap& map)
     auto height = map.height();
 
     DMap result(width, height);
+
     auto xNoise = makeNoise(width, height);
     auto yNoise = makeNoise(width, height);
 
-    float magnitude = 0.25f * width;
+    double magnitude = 0.25 * width;
 
     for (auto x = 0u; x < width; ++x)
         for (auto y = 0u; y < height; ++y) {
-            float x_ = x + magnitude * (xNoise[x][y] - .5f);
-            float y_ = y + magnitude * (yNoise[x][y] - .5f);
+            double x_ = x + magnitude * (xNoise[x][y] - .5);
+            double y_ = y + magnitude * (yNoise[x][y] - .5);
             x_ = clamp(0, x_, width - 1);
             y_ = clamp(0, y_, height - 1);
             result[x][y] = map[std::size_t(x_)][std::size_t(y_)];

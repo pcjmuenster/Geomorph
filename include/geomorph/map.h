@@ -11,6 +11,8 @@
  *        or a Map
  */
 struct Index {
+    Index() = default;
+    Index(std::size_t x, std::size_t y) : x{x}, y{y} {}
     std::size_t x, y;
 
     bool operator==(const Index& rhs) const {
@@ -24,10 +26,14 @@ struct Index {
     }
 };
 
+struct Size {
+    std::size_t width;
+    std::size_t height;
+};
+
 /**
  * @brief is a two-dimensional array whose elements are of type T
  */
-
 template <class T>
 class Map
 {
@@ -36,6 +42,7 @@ class Map
 
 public:
     Map() : Map(0, 0) {}
+    Map(Size size, T value = T()) : Map{size.width, size.height, value} {}
     Map(std::size_t width, std::size_t height, T value = T());
 
     auto& operator[](const Index& index) { return values_[index.x][index.y]; }
@@ -45,6 +52,7 @@ public:
 
     auto width() const { return values_.size(); }
     auto height() const { return values_.empty() ? 0 : values_[0].size(); }
+    Size size() const { return {width(), height()}; }
 
     void resize(std::size_t width, std::size_t height);
 
