@@ -1,17 +1,18 @@
 #include "geomorph/math_utils.h"
 
 #include <algorithm>
+#include <cfloat>
 #include <cmath>
 #include <limits>
 
-bool isZero(double f)
+bool is_zero(double f)
 {    
     return std::abs(f) < 1e-9;
 }
 
-bool isEqual(double lhs, double rhs)
+bool is_equal(double lhs, double rhs)
 {
-    return isZero(lhs - rhs);
+    return is_zero(rhs) ? is_zero(lhs) : is_zero(lhs / rhs - 1);
 }
 
 double clamp(double min, double value, double max)

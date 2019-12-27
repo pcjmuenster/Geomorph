@@ -31,7 +31,7 @@ set_target_properties(geomorph-lib PROPERTIES
     CXX_EXTENSIONS NO)
 
 # a test executable
-add_executable(geomorph-test "test/main.cpp")
+add_executable(geomorph-test "test/main.cpp" "test/verify.cpp")
 target_link_libraries(geomorph-test PRIVATE geomorph-lib)
 set_target_properties(geomorph-test PROPERTIES
     CXX_STANDARD 17

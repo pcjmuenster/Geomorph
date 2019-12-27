@@ -3,8 +3,8 @@
 
 #include "map_fwd.h"
 
-void erodeFluvial(DMap& terrain, int samples);
+void erode_fluvial(DMap& terrain, int samples);
 
-void erodeThermal(DMap& terrain, int samples);
+void erode_thermal(DMap& terrain, int samples);
 
 #endif // EROSION_H

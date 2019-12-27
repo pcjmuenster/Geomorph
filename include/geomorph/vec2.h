@@ -1,8 +1,8 @@
 #ifndef VEC2_H
 #define VEC2_H
 
-/* A class that represents a two-diamensional vector, currently no additional
- * functionality is needed -- which this kind of useless.
+/** A class that represents a two-diamensional vector, currently no additional
+ *  functionality is needed -- which this kind of useless.
  */
 
 class Vec2

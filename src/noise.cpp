@@ -16,7 +16,7 @@ void normalize(DMap& noise)
         value = (value - min) * factor;
 }
 
-DMap makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
+DMap make_noise(std::size_t width, std::size_t height, const NoiseParams& params)
 {
     auto seed = params.seed;
     if (seed == 0) {
@@ -25,27 +25,27 @@ DMap makeNoise(std::size_t width, std::size_t height, const NoiseParams& params)
     }
     std::default_random_engine eng{seed};
 
-    auto makeDevice = [&params](std::size_t level) {
-        constexpr std::size_t max_amplitude_level = 7;
+    auto make_device = [&params](std::size_t level) {
+        static constexpr std::size_t max_amplitude_level = 7;
         auto exp = max_amplitude_level - std::min(level, max_amplitude_level);
         double range = std::pow(params.roughness, double(exp));
         return std::uniform_real_distribution<double>{-range, range};
     };
 
     auto size = std::max(width, height);
-    std::size_t levelOfDetail = std::size_t(std::ceil(std::log2(size - 1)));
-    size = (1 << levelOfDetail) + 1;
+    std::size_t level_of_detail = std::size_t(std::ceil(std::log2(size - 1)));
+    size = (1 << level_of_detail) + 1;
     DMap noise(size, size);
     /* initialize corners */ {
-        auto dev = makeDevice(levelOfDetail);
+        auto dev = make_device(level_of_detail);
         noise[    0   ][    0   ] = dev(eng);
         noise[    0   ][size - 1] = dev(eng);
         noise[size - 1][    0   ] = dev(eng);
         noise[size - 1][size - 1] = dev(eng);
     }
 
-    for (auto level = levelOfDetail; level > 0; --level) {
-        auto dev = makeDevice(level);
+    for (auto level = level_of_detail; level > 0; --level) {
+        auto dev = make_device(level);
 
         std::size_t stride = 1 << level;
         std::size_t half = stride / 2;
@@ -101,15 +101,15 @@ DMap perturbed(const DMap& map)
 
     DMap result(width, height);
 
-    auto xNoise = makeNoise(width, height);
-    auto yNoise = makeNoise(width, height);
+    auto x_noise = make_noise(width, height);
+    auto y_noise = make_noise(width, height);
 
     double magnitude = 0.25 * width;
 
-    for (auto x = 0u; x < width; ++x)
-        for (auto y = 0u; y < height; ++y) {
-            double x_ = x + magnitude * (xNoise[x][y] - .5);
-            double y_ = y + magnitude * (yNoise[x][y] - .5);
+    for (std::size_t x = 0u; x < width; ++x)
+        for (std::size_t y = 0u; y < height; ++y) {
+            double x_ = x + magnitude * (x_noise[x][y] - .5);
+            double y_ = y + magnitude * (y_noise[x][y] - .5);
             x_ = clamp(0, x_, width - 1);
             y_ = clamp(0, y_, height - 1);
             result[x][y] = map[std::size_t(x_)][std::size_t(y_)];

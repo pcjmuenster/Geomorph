@@ -17,17 +17,15 @@ struct NoiseParams {
      * @brief roughness determines how smooth (smaller values) or rough (larger) the
      *                  resulting noise is; values should be chosen between 0.5 and 1.5
      */
-    float roughness = .5f;
+    double roughness = .5;
 };
 
 /**
  * @brief constructs a two-dimensional array of floats
  * @param width
  * @param height
- * @param roughness determines how smooth (smaller values) or rough (larger) the
- *                  resulting noise is; values should be chosen between 0.5 and 1.5
  */
-DMap makeNoise(std::size_t width, std::size_t height, const NoiseParams& = NoiseParams{});
+DMap make_noise(std::size_t width, std::size_t height, const NoiseParams& = NoiseParams{});
 
 DMap perturbed(const DMap& map);
 
