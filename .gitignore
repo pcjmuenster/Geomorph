@@ -35,3 +35,4 @@ build/
 
 # Device dependent files
 *.user
+*.TMP

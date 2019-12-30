@@ -18,6 +18,9 @@ struct NoiseParams {
      *                  resulting noise is; values should be chosen between 0.5 and 1.5
      */
     double roughness = .5;
+
+    bool horizontal_wrapping = false;
+    bool vertical_wrapping   = false;
 };
 
 /**
